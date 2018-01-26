@@ -4,7 +4,7 @@ foldername = '/mnt/nas2/homes/georgia/Data/SC01-1/171027-001/';
 %files = subdir(fullfile(foldername,'*.tif'));   % list of filenames (will search all subdirectories)
 FOV = [512 512];%size(read_file(files(1).name,1,1));
 numFiles = 1; %length(files);
-fpath = fullfile(foldername,'motion_corrected.h5');
+fname = fullfile(foldername,'motion_corrected.h5');
 motion_correct = true;
 
 %% downsample mat files and save into a single memory mapped matlab file
@@ -18,7 +18,7 @@ end
 fr = 30;                                         % frame rate
 tsub = 7;                                        % degree of downsampling (for 30Hz imaging rate you can try also larger, e.g. 8-10)
 ds_filename = fullfile(foldername,'ds_data.mat');
-data_type = class(read_file(fpath,1,1));
+data_type = class(read_file(fname,1,1));
 data = matfile(ds_filename,'Writable',true);
 data.Y  = zeros([FOV,0],data_type);
 data.Yr = zeros([prod(FOV),0],data_type);
@@ -125,7 +125,9 @@ ind_exc = (fitness < options.min_fitness);
 
 %% select components
 disp('selecting components')
-keep = (ind_corr | ind_cnn) & ind_exc;
+%keep = (ind_corr | ind_cnn) & ind_exc; %right now don't want to exclude
+%the ROIs that are just not active. Maybe silent cells? Let's wait and see
+keep = (ind_corr | ind_cnn);
 
 %% run GUI for modifying component selection (optional, close twice to save values)
 % run_GUI = false; %can't get the GUI to work
@@ -152,30 +154,30 @@ figure;
     linkaxes([ax1,ax2],'xy')
     colormap gray
     
-%% keep only the active components    
+%% keep only the active components    %right now actually keeping the ones that pass correlation and cnn network, not exceptionality activity
   
 A_keep = A(:,keep);
 C_keep = C(keep,:);
 
-%% manually accept/reject components
- %to view component numbers if that line says i=indshow not i=1:ind_show
-    %ax1 = subplot(121); plot_contours(A(:,keep),Cn,options,1,[],Coor_k,[],length(find(keep))); title('Selected components','fontweight','bold','fontsize',14);
-figure
-%inputs:
-%plot_contours(Aor,Cn,options,display_numbers,max_number,Coor, ln_cl, ind_show,cm)
-compind = find(keep);
-manualkeep = keep;
-for curr = 1:sum(keep)
-plot_contours(A_keep,Cn,options,1,curr,Coor_k,[],curr,[]); title(['component ' num2str(curr) ' of ' num2str(sum(keep))],'fontweight','bold','fontsize',14);
-colormap gray
-response = input('Keep (1) or Reject (0) component?');
-if response==1 || response==0
-manualkeep(compind(curr)) = response;
-else
-    disp('you did not answer 0 or 1, try again next time.')
-end
-
-end
+% %% manually accept/reject components
+%  %to view component numbers if that line says i=indshow not i=1:ind_show
+%     %ax1 = subplot(121); plot_contours(A(:,keep),Cn,options,1,[],Coor_k,[],length(find(keep))); title('Selected components','fontweight','bold','fontsize',14);
+% figure
+% %inputs:
+% %plot_contours(Aor,Cn,options,display_numbers,max_number,Coor, ln_cl, ind_show,cm)
+% compind = find(keep);
+% manualkeep = keep;
+% for curr = 1:sum(keep)
+% plot_contours(A_keep,Cn,options,1,curr,Coor_k,[],curr,[]); title(['component ' num2str(curr) ' of ' num2str(sum(keep))],'fontweight','bold','fontsize',14);
+% colormap gray
+% response = input('Keep (1) or Reject (0) component?');
+% if response==1 || response==0
+% manualkeep(compind(curr)) = response;
+% else
+%     disp('you did not answer 0 or 1, try again next time.')
+% end
+% 
+% end
 
 
 %% deconvolve (downsampled) temporal components plot GUI with components (optional)
@@ -212,3 +214,24 @@ end
 
 [F_dff,F0] = detrend_df_f(A_keep,[b,ones(prod(FOV),1)],C_full,[f_full;-double(F_dark)*ones(1,T)],R_full,options);
 %F_dff is detrended fluor in DF/F, F0 is baseline fluor for each trace
+
+%% save progress
+cd foldername
+clear ax1 ax2 data
+%REVISE this when you're sure of what you need/don't need
+%stop saving extra stuff like fname
+save CNMFresults2.mat -v7.3 -nocompression
+save('segmented.mat',...
+    'A','A_keep','b','batch_size',...
+    'C','C_full','C_keep','Cn',...
+    'cnt','cnt_sub','dims',...
+    'f','f_full','F_dark','F_full','fitness',...
+    'fr','ind_cnn','ind_corr','ind_exc',...
+    'ind_T','inds','K','keep','ln',...
+    'N','ndimsY','options','P','patches',...
+    'patch_size','overlap','R_full','R_keep',...
+    'rval_space','S','S_full','sizY','t','T',...
+    'tau','throw','Ts','tsub','tt1','value','Y',...
+    'Ysub','YrA');
+
+
