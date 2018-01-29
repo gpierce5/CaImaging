@@ -11,6 +11,7 @@ function [galvoFrameInd] = getResonantFrames(event)
 %galvoEndInd: index of the end of the galvo signal
 
 [pks,locs] = findpeaks(event,'MinPeakDistance',400);
+%is 'MinPeakHeight' more appropriate?
 %keep an eye out if 400 continues to be a good min pk distance
 %for now we can use the peak of the galvo signal because it's clean
 %enough and because Ca will have a slight lag anyway, so the imaging
@@ -31,8 +32,8 @@ frameTimes = locs(pks>midpk);
 dEvent=diff(event);
 [dpks,dlocs]=findpeaks(dEvent);
 startScan = dlocs(dpks>2);
-if startScan>1
-    disp('Oops, ' num2str(length(startScan)) ' galvo runs. Keeping final session')
+if length(startScan)>1
+    disp(['Oops, ' num2str(length(startScan)) ' galvo runs. Keeping final session'])
     frameTimes=frameTimes(frameTimes >= startScan(end));
 end
 

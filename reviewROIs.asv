@@ -15,9 +15,9 @@ load(cnmfpath)
 [sesh,~] = strtok(remnant5,'\');
 disp(['Reviewing ' mouse ' ' sesh])
 
-% keep = (ind_corr | ind_cnn) & ind_exc;
-% A_keep = A(:,keep);
-% C_keep = C(keep,:);
+keep = (ind_corr | ind_cnn) & ind_exc;
+A_keep = A(:,keep);
+C_keep = C(keep,:);
 
 if ~exist('F_dff','var')
     FOV = [512 512]
@@ -89,18 +89,20 @@ for i = start:size(A_keep,2) %loop through each ROI
     if ~isnan(ROIkeep(i))
         figure(j)
         subplot(4,2,1:6)
+        hold off
+        
         if i > 1
             %figure(j)
             %subplot(2,2,1)
-            %imagesc(Cn), colormap('gray'),axis square
-            %for jj = 1:i-1
-            jj=i-1;
+            imagesc(Cn), colormap('gray'),axis square, hold on
+            for jj = 1:i-1
                 A_temp = full(reshape(A_keep(:,jj),d1,d2));
                 if ROIkeep(jj) == 1; plotSingleROI(A_temp,options.maxthr,jj,'g'); else plotSingleROI(A_temp,options.maxthr,'r'); end
-            %end
+            end
         end
+        hold on
         A_temp = full(reshape(A_keep(:,i),d1,d2));
-        roi = plotSingleROI(A_temp,options.maxthr,'b');
+        plotSingleROI(A_temp,options.maxthr,'b');
       
 %         subplot(2,2,2)
 %         cla
@@ -110,7 +112,7 @@ for i = start:size(A_keep,2) %loop through each ROI
         %cla
 %         plot(1:size(C_df,2)-5,C_df(:,1:end-5),'Color',[0.5 0.5 0.5]),hold on
 %         plot(1:size(C_df,2)-5,C_df(i,1:end-5),'b'), hold off
-       roidff= plot(1:num2read,C_df(i,1:num2read),'b');
+        plot(1:num2read,C_df(i,1:num2read),'b')
         
         %axis tight
         drawnow limitrate
@@ -127,16 +129,12 @@ for i = start:size(A_keep,2) %loop through each ROI
             end
             if r == 0 || r==1
             ROIkeep(i) = r;
-            delete(roi);
-            delete(roidff);
             elseif r == 'q'
                 break;
             end
         else
             disp('Automatically rejecting ROI...')
             ROIkeep(i) = 0;
-                        delete(roi);
-            delete(roidff);
             %pause(0.5)
         end
 %         if isequal(r,'n')
