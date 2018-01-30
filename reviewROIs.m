@@ -20,7 +20,7 @@ disp(['Reviewing ' mouse ' ' sesh])
 % C_keep = C(keep,:);
 
 if ~exist('F_dff','var')
-    FOV = [512 512]
+    FOV = [512 512];
     [F_dff,F0] = detrend_df_f(A_keep,[b,ones(prod(FOV),1)],C_full,[f_full;-double(F_dark)*ones(1,T)],R_full,options);
 end
 
@@ -32,14 +32,15 @@ else
     save(cafile, 'ROIkeep')
 end
 
-if ~exist('sframe','var'), sframe = 1;end
-if ~exist('num2read','var'),num2read = 9000;end
+if ~exist('sframe','var'), sframe = 3000;end
+if ~exist('num2read','var'),num2read = 5000;end
 
 %T = size(F_dff,2); already saved T
 d1 = dims(1); %sqrt(size(P.sn,1));%size(Yr,1);
 d2 = dims(2); %d1
 %Cn =  reshape(P.sn,d1,d2); %correlation_image(Y); %max(Y,[],3); %std(Y,[],3); % image statistic (only for display purposes)
-C_df = F_dff; %not sure if C_full is supposed to be the new C_df... %full(C_df);
+df_smooth = movmean(F_dff',5); %not sure if C_full is supposed to be the new C_df... %full(C_df);
+C_df=df_smooth';
 %I think we want the delta f calculation here...
 
 %Display background
@@ -47,10 +48,10 @@ j = figure('Position',[100 100 800 800]);
 set(j,'WindowStyle','docked');
 yMax = quantile(C_df(:),0.9990); if issparse(yMax),yMax = full(yMax);end
 yMin = quantile(C_df(:),0.0010); if issparse(yMin),yMin = full(yMin);end
-subplot(4,2,1:6)
-imagesc(Cn), colormap('gray'),axis square, hold on
-subplot(4,2,7:8); xlabel('frame #'); ylabel('df / F'), axis([0 num2read yMin yMax])
-plot(1:num2read,C_df(:,1:num2read),'Color',[0.5 0.5 0.5]),hold on
+ subplot(2,2,1)
+ imagesc(Cn), colormap('gray'),axis square, hold on
+subplot(2,2,3:4); xlabel('frame #'); ylabel('df / F'), axis([0 num2read yMin yMax])
+plot(sframe:num2read,C_df(:,sframe:num2read),'Color',[0.5 0.5 0.5]),hold on
 
 %Check if have previously saved some ROIs. If so, plot in red/green
 if isequal(nansum(ROIkeep),0)
@@ -62,13 +63,13 @@ else
         ROIkeep = zeros(1,size(A_keep,2)-1);
     else
         start = find(ROIkeep == 1,1,'last');
-        for i = 1:start
-            figure(j)
-            subplot(4,2,1:6)
-            A_temp = full(reshape(A_keep(:,i),d1,d2));
-            if ROIkeep(i) == 1; plotSingleROI(A_temp,options.maxthr,'g');
-            else plotSingleROI(A_temp,options.maxthr,'r'); end
-        end
+%         for i = 1:start
+%             figure(j)
+%             subplot(4,2,1:6)
+%             A_temp = full(reshape(A_keep(:,i),d1,d2));
+%             if ROIkeep(i) == 1; plotSingleROI(A_temp,options.maxthr,'g');
+%             else plotSingleROI(A_temp,options.maxthr,'r'); end
+%         end
     end
 end
 
@@ -85,32 +86,49 @@ end
 % C2(isnan(ROIkeep),:) = NaN;
 % C_df(isnan(ROIkeep),:) = NaN;
 
+disp(['Number of ROIs remaining = ',num2str(size(ROIkeep,2) - nansum(isnan(ROIkeep))-sum(ROIkeep))])
+
 for i = start:size(A_keep,2) %loop through each ROI
     if ~isnan(ROIkeep(i))
         figure(j)
-        subplot(4,2,1:6)
+%         subplot(2,2,1)
+% imagesc(Cn), colormap('gray'),axis square, hold on
         if i > 1
-            %figure(j)
-            %subplot(2,2,1)
+             figure(j)
+%             subplot(2,2,1)
             %imagesc(Cn), colormap('gray'),axis square
+            
             %for jj = 1:i-1
+            subplot(2,2,1)
+            hold on
             jj=i-1;
-                A_temp = full(reshape(A_keep(:,jj),d1,d2));
-                if ROIkeep(jj) == 1; plotSingleROI(A_temp,options.maxthr,jj,'g'); else plotSingleROI(A_temp,options.maxthr,'r'); end
+                im = full(A_keep(:,jj));
+                if ROIkeep(jj) == 1; dispOutline(im,d1,d2,options.se.Dimensionality,'g'); else dispOutline(im,d1,d2,options.se.Dimensionality,'r'); end
             %end
+            
+%             %for jj = 1:i-1
+%             jj=i-1;
+%                 A_temp = full(reshape(A_keep(:,jj),d1,d2));
+%                 if ROIkeep(jj) == 1; plotSingleROI(A_temp,options.maxthr,jj,'g'); else plotSingleROI(A_temp,options.maxthr,'r'); end
+%             %end
         end
-        A_temp = full(reshape(A_keep(:,i),d1,d2));
-        roi = plotSingleROI(A_temp,options.maxthr,'b');
-      
-%         subplot(2,2,2)
-%         cla
-%         dispROI(A_or,d1,d2,i,T,options);
+        subplot(2,2,1)
+         im = full(A_keep(:,i));
+        roi=dispOutline(im,d1,d2,options.se.Dimensionality,'b');
         
-        subplot(4,2,7:8); xlabel('frame #'); ylabel('df / F'), axis([0 num2read yMin yMax])
+        
+        subplot(2,2,2)
+        dispROI(A_keep,d1,d2,i,T,options);
+        
+%         A_temp = full(reshape(A_keep(:,i),d1,d2));
+%         roi = plotSingleROI(A_temp,options.maxthr,'b');
+      
+        
+         subplot(2,2,3:4); xlabel('frame #'); ylabel('df / F'), axis([0 num2read yMin yMax])
         %cla
 %         plot(1:size(C_df,2)-5,C_df(:,1:end-5),'Color',[0.5 0.5 0.5]),hold on
 %         plot(1:size(C_df,2)-5,C_df(i,1:end-5),'b'), hold off
-       roidff= plot(1:num2read,C_df(i,1:num2read),'b');
+      trace= plot(sframe:num2read,C_df(i,sframe:num2read),'b'); 
         
         %axis tight
         drawnow limitrate
@@ -127,33 +145,45 @@ for i = start:size(A_keep,2) %loop through each ROI
             end
             if r == 0 || r==1
             ROIkeep(i) = r;
-            delete(roi);
-            delete(roidff);
+           delete(roi);
+           delete(trace);
             elseif r == 'q'
                 break;
             end
         else
             disp('Automatically rejecting ROI...')
             ROIkeep(i) = 0;
-                        delete(roi);
-            delete(roidff);
+       
             %pause(0.5)
         end
 %         if isequal(r,'n')
 %             break;
 %         end
-        save(cafile,'ROIkeep','C_df','-append')
+        save(cafile,'ROIkeep','F_dff','-append')
     end
 end
 
+disp(['Total of ',num2str(nansum(ROIkeep)),' putative cells found'])
+%saveas(j,[nam(1:end-4),'_CaTraces.fig'])
 
+df_keep = full(C_df(ROIkeep == 1,:));
 
+save(cafile,'df_keep','-append')
 
+%Calculate the raw whole frame fluoresence (figure out later how to do this
+%better)
+% wf1 = reshape(Yr,[d1*d2,T]);
+% avgCa_wf = nanmean(wf1,2);
+% avgCa_wf(end) = avgCa_wf(end-1);
+% df_WF = medfilt1(double(avgCa_wf),10);
 
+save(fname,'ROIkeep','C_df','df_keep','-append')
 
-
-
-
+if exist(cafile,'file')==2; save(cafile,'df_keep','-append')
+else save(cafile,'df_keep'), end
 
 end
+
+
+
 
